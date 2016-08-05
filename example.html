@@ -1,0 +1,228 @@
+<html>
+    <head>
+        <title>WebRTC Basic</title>
+    </head>
+    <body>
+        <header><h1>WebRTC Basic</h1></header>
+
+        <section>
+
+            <div id="info" class="disconnected">
+                you must first create or join a channel
+            </div>
+
+            <form id="signal" action="">
+                <p>
+					<label for="channel">channel: </label>
+					<input id="channel" type="text" value="test" />
+					<button id="create">create</button>
+                </p>
+
+                <p>
+					<label for="offer">offer: </label>
+					<textarea id="offer" rows="8" cols="60"></textarea>
+					<button id="join">join</button>
+                </p>
+
+                <p>
+					<label for="answer">answer: </label>
+					<textarea id="answer" rows="8" cols="60"></textarea>
+					<button id="submitAnswer" disabled>submit answer</button>
+                </p>
+            </form>
+
+            <form id="chat" action="">
+                <label for="message"> message: </label>
+                <input id="message" autocomplete="off" disabled />
+                <button id="send" disabled>send</button>
+            </form>
+
+            <ul id="messages"></ul>
+
+        </section>
+        <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+        <script type="text/javascript">
+
+			var host, guest;
+
+			var PeerConnection = window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+			var IceCandidate = window.mozRTCIceCandidate || window.RTCIceCandidate;
+			var SessionDescription = window.mozRTCSessionDescription || window.RTCSessionDescription;
+
+			function setChannelEvents(channel) {
+				channel.onmessage = function (event) {
+					console.log('** channel.onmessage: ', event);
+				};
+
+				channel.onopen = function () {
+					console.log('** channel.onopen');
+					// and finally we can do this
+					channel.send('hello world!');
+
+				};
+
+				channel.onerror = function (err) {
+					console.error('** channel.onerror: ', err);
+				};
+
+				channel.onclose = function (err) {
+					console.log('** channel.onclose: ', err);
+				};
+			}
+
+
+// ---------------------------------------------------------------------
+// Host object creates the offer for a WebRTC session
+			function Host(id) {
+				var self = this;
+				this.id = id;
+				this.peer = new PeerConnection(null, null);
+				this.dataChannel = this.peer.createDataChannel(id, {
+					reliable: true
+				});
+
+				this.peer.onicecandidate = function (event) {
+					if (!event.candidate) { // when ice is complete, there is an event without a candidate (on Chrome anyhow)
+						console.log(self.peer);
+						self.offer = self.peer.localDescription;
+						self.cb(self.offer);
+					}
+				}
+
+				setChannelEvents(this.dataChannel);
+			}
+
+			Host.prototype.createOffer = function (cb) {
+				var self = this;
+
+				this.peer.createOffer(function (offer) {
+					console.log('Host.peer.createOffer callback: ', offer);
+					self.cb = cb;
+					self.peer.setLocalDescription(offer, function () {
+						// We wait for ICE to complete before continuing
+						//self.offer = offer;
+						//cb(offer);
+					}, function (err) {
+						console.error(err);
+					});
+				}, function (err) {
+					console.error(err);
+				}, null);
+
+			}
+
+			Host.prototype.setRemoteDescription = function (answer, cb) {
+				var self = this;
+				console.log('Host.setRemoteDescription: ', answer);
+
+				var _sd = new SessionDescription(answer);
+
+				this.peer.setRemoteDescription(_sd, cb, function (err) {
+					console.error(err);
+				});
+			};
+
+
+// ---------------------------------------------------------------------
+// Guest object answers the offer from the host
+			function Guest(id) {
+				this.id = id;
+				this.peer = new PeerConnection(null, null);
+
+				this.dataChannel = this.peer.createDataChannel(id, {
+					reliable: true
+				});
+
+				var self = this;
+				this.peer.ondatachannel = function (event) {
+					console.log('Guest.peer.datachannel: ', event);
+					self.dataChannel = event.channel;
+					setChannelEvents(self.dataChannel);
+				};
+				this.peer.onicecandidate = function (event) {
+					if (!event.candidate) { // when ice is complete, there is an event without a candidate (on Chrome anyhow)
+						self.answer = self.peer.localDescription;
+						self.cb(self.answer);
+					}
+				}
+			}
+
+			Guest.prototype.setRemoteDescription = function (offer, cb) {
+				var self = this;
+				var _desc = new SessionDescription(offer);
+				console.log('Guest desc: ', _desc, offer);
+
+				this.peer.setRemoteDescription(_desc, function () {
+					self.offer = offer;
+					cb();
+				}, function (err) {
+					console.error(err);
+				});
+			};
+
+			Guest.prototype.createAnswer = function (cb) {
+				var self = this;
+
+				this.peer.createAnswer(function (answer) {
+					console.log('Guest.peer.createAnswer callback: ', answer);
+					self.answer = answer;
+					self.cb = cb;
+					self.peer.setLocalDescription(answer, function () {
+						// Again, waiting for ICE
+						//cb(answer);
+					}, function (err) {
+						console.error(err);
+					});
+				}, function (err) {
+					console.error(err);
+				});
+			};
+
+
+// ---------------------------------------------------------------------
+			$(document).ready(function () {
+
+				$("#create").click(function () {
+					$("#join").attr("disabled", "disabled");
+					$("#submitAnswer").removeAttr("disabled");
+
+					channelID = $("#channel").val();
+					host = new Host(channelID);
+					host.createOffer(function (offer) {
+						$('#offer').val(JSON.stringify(offer));
+					})
+					return false;
+				});
+
+
+				$("#join").click(function () {
+					$("#create").attr("disabled", "disabled");
+					$("#submitAnswer").attr("disabled", "disabled");
+
+					channelID = $("#channel").val();
+					offer = $("#offer").val();
+					guest = new Guest(channelID);
+					guest.setRemoteDescription(JSON.parse(offer), function () {
+						console.log('Guest.setRemoteDescription completed');
+						guest.createAnswer(function (answer) {
+							$("#answer").val(JSON.stringify(answer));
+						});
+					});
+					return false;
+				});
+
+				$("#submitAnswer").click(function () {
+					var answer = $("#answer").val();
+					host.setRemoteDescription(JSON.parse(answer), function () {
+						console.log('-- complete');
+						// We wait before the data channel is set up, before we transmit anything (peer.onremotedatachannel)
+						//host.dataChannel.send('hello world!');
+					});
+					return false;
+				});
+
+			});
+
+        </script>
+    </body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>getUserMedia very simple demo</title>
+    <script src="js/mediaPeerConnection.js" async="true"></script>
+    <script src="js/dataChannel.js" async="true"></script>
+    <script src="js/helper.js" async="true"></script>
+    <script src="/socket.io/socket.io.js" async="true"></script>
+    <script type="text/javascript" src="js/simpleNodeClient.js" async="true"></script>
+</head>
+<body>
+
+<div id="mainDiv">
+    <h1><code>getUserMedia()</code> very simple demo</h1>
+    <p>With this example, we simply call <code>getUserMedia()</code> and display the received stream inside an HTML5 element</p>
+    <p>View page source to access both HTML and JavaScript code...</p>
+    <!-- // TODO pass constrains from outside, like droplist choice -->
+    <p>Click one of the below buttons to change video resolution...</p>
+    <div id="buttonsQualityControl">
+        <button id="qvga">320x240</button>
+        <button id="vga">640x480</button>
+        <!-- // TODO HD not working on macbook -->
+        <button id="hd">1280x960</button>
+    </div>
+    <p id="dimensions"></p>
+</div>
+
+<table border="1" width="100%">
+    <tr>
+        <th>Local video</th>
+        <th>'Remote' video</th>
+    </tr>
+    <tr>
+        <td><video id="localVideo" autoplay></video></td>
+        <td><video id="remoteVideo" autoplay></video></td>
+    </tr>
+    <tr>
+        <td align="center">
+            <div>
+                <button id="startMediaButton">Start Video</button>
+                <button id="callButton">Call</button>
+                <button id="hangupButton">Hang Up</button>
+            </div>
+        </td>
+        <td>
+            <!-- void -->
+        </td>
+    </tr>
+</table>
+
+<textarea rows="5" cols="50" id="dataChannelSend", disabled placeholder="1: Press Start; 2: Enter text; 3: Press Send."></textarea>
+<textarea rows="5" cols="50" id="dataChannelReceive" disabled></textarea>
+<div id="buttonsDataChannel">
+    <button id="startChannelButton">Start data channel</button>
+    <button id="sendButton">Send</button>
+    <button id="closeButton">Stop</button>
+</div>
+
+<div id="scratchPad"></div>
+
+
+</body>
+</html>

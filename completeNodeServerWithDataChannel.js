@@ -1,11 +1,18 @@
 var static = require('node-static');
-var http = require('http');
+var https = require('https');
 // Create a node-static server instance
 var file = new(static.Server)();
 
+const fs = require('fs');
+const options = {
+    key: fs.readFileSync('./my-private-key.pem'),
+    cert: fs.readFileSync('./my-certificate.pem')
+};
+
+
 // We use the http module's createServer function and
 // rely on our instance of node-static to serve the files
-var app = http.createServer(function (req, res) {
+var app = https.createServer(options, function (req, res) {
     file.serve(req, res);
 }).listen(8181);
 
@@ -23,9 +30,11 @@ function findClientsSocket(roomId, namespace) {
     // room exists
     else {
         var room = io.sockets.adapter.rooms[roomId];
-            console.log(io.sockets.adapter.rooms);
-            console.log(room.length + " in this room")
-            return room.length;;
+        console.log(io.sockets);
+        console.log(io.sockets.adapter);
+        console.log(room.length + " in this room")
+//        return room.length;
+        return Object.keys(room).length;
     }
 }
 

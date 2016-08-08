@@ -68,7 +68,7 @@ var sdpConstraints = webrtcDetectedBrowser === 'firefox' ?
 var room = prompt('Enter room name:');
 
 // Connect to signalling server
-var socket = io.connect(':8181/');
+var socket = io.connect();
 
 // Send 'Create or join' message to signalling server
 if (room !== '') {
